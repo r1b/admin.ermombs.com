@@ -1,15 +1,15 @@
 import os
 from flask import Flask
 from flask_admin import Admin
-from flask_admin.contrib.fileadmin import FileAdmin
 from flask_admin.contrib.sqla import ModelView
+from flask_admin.form.upload import FileUploadField, ImageUploadField
 from flask_sqlalchemy import SQLAlchemy
 
 
 # -----------------------------------------------------------------------------
 
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder=os.environ['STATIC_ROOT'])
 
 
 app.config['DATABASE_FILE'] = os.environ['DATABASE_FILE']
@@ -41,32 +41,81 @@ class Series(db.Model):
     slug = db.Column(db.Text, nullable=False)
     title = db.Column(db.Text, nullable=False)
 
+    def __repr__(self):
+        return self.title
+
 
 class Work(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     dimensions = db.Column(db.Text, nullable=False)
     image_filename = db.Column(db.Text, nullable=False)
     materials = db.Column(db.Text, nullable=False)
-    series = db.Column(db.Integer, db.ForeignKey(Series.id))
     slug = db.Column(db.Text, nullable=False)
     title = db.Column(db.Text, nullable=False)
     year = db.Column(db.Integer, nullable=False)
 
+    series_id = db.Column(db.Integer, db.ForeignKey(Series.id))
+    series = db.relationship(Series, backref=db.backref('works'))
+
+    def __repr__(self):
+        return self.title
+
 
 # -----------------------------------------------------------------------------
 
-InfoView = ModelView(Info, db.session)
-SeriesView = ModelView(Series, db.session)
-WorkView = ModelView(Work, db.session)
+class MyImageUploadField(ImageUploadField):
+    # Hack around OSError when uploading GIF
+    keep_image_formats = ('PNG', 'GIF',)
+
+
+class InfoModelView(ModelView):
+    form_args = {
+        'cv_filename': {
+            'base_path': app.config['STATIC_ROOT'],
+        },
+        'featured_image_filename': {
+            'base_path': app.config['STATIC_ROOT'],
+        }
+    }
+    form_overrides = {
+        'cv_filename': FileUploadField,
+        'featured_image_filename': MyImageUploadField,
+    }
+
+
+class SeriesModelView(ModelView):
+    form_args = {
+        'featured_image_filename': {
+            'base_path': app.config['STATIC_ROOT'],
+        }
+    }
+    form_overrides = {
+        'featured_image_filename': MyImageUploadField,
+    }
+
+
+class WorkModelView(ModelView):
+    form_args = {
+        'image_filename': {
+            'base_path': app.config['STATIC_ROOT'],
+        }
+    }
+    form_overrides = {
+        'image_filename': MyImageUploadField,
+    }
+
+
+InfoView = InfoModelView(Info, db.session)
+SeriesView = SeriesModelView(Series, db.session)
+WorkView = WorkModelView(Work, db.session)
 
 
 # -----------------------------------------------------------------------------
 
 
-admin = Admin(name='ermombs.com admin', template_mode='bootstrap3')
+admin = Admin(name='ermombs.com admin', template_mode='bootstrap3', url='/')
 
 
-admin.add_view(FileAdmin(app.config['STATIC_ROOT'], '/static/', name='Static Files'))
 admin.add_view(InfoView)
 admin.add_view(SeriesView)
 admin.add_view(WorkView)

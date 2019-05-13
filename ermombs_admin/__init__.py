@@ -4,6 +4,7 @@ from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.form.upload import FileUploadField, ImageUploadField
 from flask_sqlalchemy import SQLAlchemy
+from wtforms.fields import StringField
 
 
 # -----------------------------------------------------------------------------
@@ -75,10 +76,11 @@ class InfoModelView(ModelView):
         },
         'featured_image_filename': {
             'base_path': app.config['STATIC_ROOT'],
-        }
+        },
     }
     form_overrides = {
         'cv_filename': FileUploadField,
+        'email': StringField,
         'featured_image_filename': MyImageUploadField,
     }
 
@@ -91,6 +93,8 @@ class SeriesModelView(ModelView):
     }
     form_overrides = {
         'featured_image_filename': MyImageUploadField,
+        'slug': StringField,
+        'title': StringField,
     }
 
 
@@ -101,7 +105,11 @@ class WorkModelView(ModelView):
         }
     }
     form_overrides = {
+        'dimensions': StringField,
         'image_filename': MyImageUploadField,
+        'materials': StringField,
+        'slug': StringField,
+        'title': StringField,
     }
 
 
